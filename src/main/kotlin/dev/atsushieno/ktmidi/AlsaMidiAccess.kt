@@ -134,15 +134,19 @@ class AlsaMidiPortDetails(private val port: AlsaPortInfo) : MidiPortDetails {
         get() = port.version
 }
 
-class AlsaMidiInput(seq: AlsaSequencer, appPort: AlsaMidiPortDetails, sourcePort: AlsaMidiPortDetails) : MidiInput {
-    private val seq: AlsaSequencer = seq
-    private val port: AlsaMidiPortDetails = appPort
-    private val source_port: AlsaMidiPortDetails = sourcePort
+class AlsaMidiInput(private val seq: AlsaSequencer, private val appPort: AlsaMidiPortDetails, private val sourcePort: AlsaMidiPortDetails) : MidiInput {
 
     override val details: MidiPortDetails
-        get() = source_port
+        get() = sourcePort
 
-    override var connection: MidiPortConnectionState = MidiPortConnectionState.OPEN
+    override var connectionState: MidiPortConnectionState = MidiPortConnectionState.OPEN
+
+    override var midiProtocol: Int
+        get() = MidiCIProtocolValue.MIDI1
+        set(value) {
+            if (value != MidiCIProtocolValue.MIDI1)
+                throw UnsupportedOperationException("ALSA does not support MIDI 2.0 yet")
+        }
 
     private var messageReceived: OnMidiReceivedEventListener? = null
 
@@ -156,11 +160,11 @@ class AlsaMidiInput(seq: AlsaSequencer, appPort: AlsaMidiPortDetails, sourcePort
             type = AlsaSubscriptionQueryType.Write
             index = 0
         }
-        q.address.client = port.portInfo.client.toByte()
-        q.address.port = port.portInfo.port.toByte()
+        q.address.client = appPort.portInfo.client.toByte()
+        q.address.port = appPort.portInfo.port.toByte()
         if (seq.queryPortSubscribers (q))
-            seq.disconnectDestination (port.portInfo.port, q.address.client.toInt(), q.address.port.toInt())
-        seq.deleteSimplePort (port.portInfo.port)
+            seq.disconnectDestination (appPort.portInfo.port, q.address.client.toInt(), q.address.port.toInt())
+        seq.deleteSimplePort (appPort.portInfo.port)
     }
 
     init {
@@ -168,19 +172,23 @@ class AlsaMidiInput(seq: AlsaSequencer, appPort: AlsaMidiPortDetails, sourcePort
         val received : (ByteArray, Int, Int) -> Unit = { buf, start, len ->
             messageReceived?.onEventReceived (buf, start, len, 0)
         }
-        seq.startListening (port.portInfo.port, buffer, onReceived = received, timeout = -1)
+        seq.startListening (appPort.portInfo.port, buffer, onReceived = received, timeout = -1)
     }
 }
 
-class AlsaMidiOutput(seq: AlsaSequencer, appPort: AlsaMidiPortDetails, targetPort: AlsaMidiPortDetails) : MidiOutput {
-    private val seq: AlsaSequencer = seq
-    private val port: AlsaMidiPortDetails = appPort
-    private val targetPort: AlsaMidiPortDetails = targetPort
+class AlsaMidiOutput(private val seq: AlsaSequencer, private val appPort: AlsaMidiPortDetails, private val targetPort: AlsaMidiPortDetails) : MidiOutput {
 
     override val details: MidiPortDetails
         get() = targetPort
 
-    override var connection: MidiPortConnectionState = MidiPortConnectionState.OPEN
+    override var connectionState: MidiPortConnectionState = MidiPortConnectionState.OPEN
+
+    override var midiProtocol: Int
+        get() = MidiCIProtocolValue.MIDI1
+        set(value) {
+            if (value != MidiCIProtocolValue.MIDI1)
+                throw UnsupportedOperationException("ALSA does not support MIDI 2.0 yet")
+        }
 
     override fun close() {
         // unsubscribe the app port from the MIDI output, and then delete the port.
@@ -188,14 +196,14 @@ class AlsaMidiOutput(seq: AlsaSequencer, appPort: AlsaMidiPortDetails, targetPor
             type = AlsaSubscriptionQueryType.Read
             index = 0
         }
-        q.address.client = port.portInfo.client.toByte()
-        q.address.port = port.portInfo.port.toByte()
+        q.address.client = appPort.portInfo.client.toByte()
+        q.address.port = appPort.portInfo.port.toByte()
         if (seq.queryPortSubscribers(q))
-            seq.disconnectDestination(port.portInfo.port, q.address.client.toInt(), q.address.port.toInt())
-        seq.deleteSimplePort(port.portInfo.port)
+            seq.disconnectDestination(appPort.portInfo.port, q.address.client.toInt(), q.address.port.toInt())
+        seq.deleteSimplePort(appPort.portInfo.port)
     }
 
     override fun send(mevent: ByteArray, offset: Int, length: Int, timestamp: Long) {
-        seq.send(port.portInfo.port, mevent, offset, length)
+        seq.send(appPort.portInfo.port, mevent, offset, length)
     }
 }
