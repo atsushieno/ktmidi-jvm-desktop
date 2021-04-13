@@ -2,6 +2,8 @@ package dev.atsushieno.ktmidi
 
 import dev.atsushieno.alsakt.*
 
+internal fun Byte.toUnsigned() : Int = if (this < 0) this + 0x100 else this.toInt()
+
 class AlsaMidiAccess : MidiAccess() {
 
     companion object {
@@ -42,7 +44,7 @@ class AlsaMidiAccess : MidiAccess() {
     }
 
     // [input device port] --> [RETURNED PORT] --> app handles messages
-    private fun createInputConnectedPort (seq: AlsaSequencer , pinfo:  AlsaPortInfo, portName: String = "alsa-sharp input") : AlsaPortInfo {
+    private fun createInputConnectedPort (seq: AlsaSequencer , pinfo:  AlsaPortInfo, portName: String = "ktmidi ALSA input") : AlsaPortInfo {
         val portId = seq.createSimplePort (portName, input_connected_cap, midi_port_type)
         val sub =  AlsaPortSubscription ()
         sub.destination.client = seq.currentClientId.toByte()
@@ -50,11 +52,11 @@ class AlsaMidiAccess : MidiAccess() {
         sub.sender.client = pinfo.client.toByte()
         sub.sender.port = pinfo.port.toByte()
         seq.subscribePort (sub)
-        return seq.getPort (sub.destination.client.toInt(), sub.destination.port.toInt())
+        return seq.getPort (sub.destination.client.toUnsigned(), sub.destination.port.toUnsigned())
     }
 
     // app generates messages --> [RETURNED PORT] --> [output device port]
-    private fun createOutputConnectedPort ( seq: AlsaSequencer, pinfo: AlsaPortInfo, portName: String = "alsa-sharp output") : AlsaPortInfo {
+    private fun createOutputConnectedPort ( seq: AlsaSequencer, pinfo: AlsaPortInfo, portName: String = "ktmidi ALSA output") : AlsaPortInfo {
         val portId = seq.createSimplePort (portName, output_connected_cap, midi_port_type)
         val sub = AlsaPortSubscription ()
         sub.sender.client = seq.currentClientId.toByte()
@@ -62,7 +64,7 @@ class AlsaMidiAccess : MidiAccess() {
         sub.destination.client = pinfo.client.toByte()
         sub.destination.port = pinfo.port.toByte()
         seq.subscribePort (sub)
-        return seq.getPort (sub.sender.client.toInt(), sub.sender.port.toInt())
+        return seq.getPort (sub.sender.client.toUnsigned(), sub.sender.port.toUnsigned())
     }
 
     override val inputs : Iterable<MidiPortDetails>
@@ -163,7 +165,7 @@ class AlsaMidiInput(private val seq: AlsaSequencer, private val appPort: AlsaMid
         q.address.client = appPort.portInfo.client.toByte()
         q.address.port = appPort.portInfo.port.toByte()
         if (seq.queryPortSubscribers (q))
-            seq.disconnectDestination (appPort.portInfo.port, q.address.client.toInt(), q.address.port.toInt())
+            seq.disconnectDestination (appPort.portInfo.port, q.address.client.toUnsigned(), q.address.port.toUnsigned())
         seq.deleteSimplePort (appPort.portInfo.port)
     }
 
@@ -199,7 +201,7 @@ class AlsaMidiOutput(private val seq: AlsaSequencer, private val appPort: AlsaMi
         q.address.client = appPort.portInfo.client.toByte()
         q.address.port = appPort.portInfo.port.toByte()
         if (seq.queryPortSubscribers(q))
-            seq.disconnectDestination(appPort.portInfo.port, q.address.client.toInt(), q.address.port.toInt())
+            seq.disconnectDestination(appPort.portInfo.port, q.address.client.toUnsigned(), q.address.port.toUnsigned())
         seq.deleteSimplePort(appPort.portInfo.port)
     }
 
