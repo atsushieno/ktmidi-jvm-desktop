@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'dev.atsushieno'
-version = '0.2.7'
+version = '0.2.7.5'
 
 repositories {
     mavenCentral()
@@ -51,7 +51,7 @@ afterEvaluate {
                 artifact(sourceJar)
 
                 pom {
-                    name.set('ktmidi')
+                    name.set('ktmidi-jvm-desktop')
                     description.set('Kotlin library for MIDI 1.0 and MIDI 2.0 - ALSA')
                     url.set('https://github.com/atsushieno/ktmidi-jvm-desktop')
                     scm {
