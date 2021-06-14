@@ -98,10 +98,10 @@ afterEvaluate {
                 }
             }
         }
-
-        apply from: "./publish-root.gradle"
-
-        // keep it as is. It is replaced by CI release builds
-        signing {}
     }
+
+    apply from: "./publish-root.gradle"
+
+    // keep it as is. It is replaced by CI release builds
+    signing {}
 }
